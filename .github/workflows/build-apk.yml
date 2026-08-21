@@ -1,0 +1,66 @@
+name: Build Android APK
+
+# Compila la app nativa de Android (carpeta android/) y publica el .apk
+# resultante como Release descargable — no hace falta tener Android Studio
+# ni el SDK de Android instalados en tu computadora. Ver README, sección 13.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Aceptar licencias del SDK
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Compilar APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Preparar artefacto
+        run: cp android/app/build/outputs/apk/release/app-release.apk lobyte-erp.apk
+
+      - name: Subir como artefacto del workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: lobyte-erp-apk
+          path: lobyte-erp.apk
+          retention-days: 90
+
+      - name: Publicar como Release descargable
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: "LOBYTE ERP — APK Android"
+          body: |
+            APK generada automáticamente desde el último commit en `main`
+            (${{ github.sha }}). Descargala e instalala en tu celular — ver
+            el README, sección 13, para el paso a paso de instalación.
+          files: lobyte-erp.apk
+          make_latest: true

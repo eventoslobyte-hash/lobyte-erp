@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mismo azul de marca que usa el ERP web (variable primary en globals.css) -->
+    <color name="colorPrimary">#3B78F6</color>
+    <color name="backgroundColor">#FFFFFF</color>
+</resources>

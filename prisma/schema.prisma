@@ -1,0 +1,271 @@
+// =============================================================================
+// LOBYTE ERP — Esquema de base de datos (Prisma)
+// Alquiler de tótems / equipamiento audiovisual + servicios digitales + eventos
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum EquipmentModel {
+  TOTEM_27_AUTOSERVICIO
+  TOTEM_TACTIL_PCAP
+  TOTEM_TACTIL_IR
+  TV_SMART
+  PLACA_INTERACTIVA
+  KIOSCO_DOBLE_PANTALLA
+  OTRO
+}
+
+enum EquipmentStatus {
+  DISPONIBLE
+  EN_EVENTO
+  MANTENIMIENTO
+  BAJA
+}
+
+enum OrderStatus {
+  PRESUPUESTADO
+  EN_COTIZACION
+  CONFIRMADO
+  EN_CURSO
+  FINALIZADO
+  CANCELADO
+}
+
+enum DigitalServiceType {
+  DESARROLLO_WEB
+  JUEGOS
+  PLACAS
+  VIDEOS
+  EDICION
+  ALQUILER_PURO
+}
+
+enum MaterialStatus {
+  NO_NECESARIO
+  PENDIENTE
+  INCOMPLETO
+  COMPLETO
+}
+
+enum InsuranceStatus {
+  PENDIENTE
+  PRESENTADO
+  NO_REQUERIDO
+}
+
+enum InvoiceType {
+  FACTURA_A
+  FACTURA_C
+  SIN_FACTURA
+}
+
+enum PaymentMethod {
+  EFECTIVO
+  TRANSFERENCIA
+  CRYPTO
+  TARJETA
+  OTRO
+}
+
+enum OrigenCliente {
+  INSTAGRAM
+  REFERIDO
+  GOOGLE
+  EXPO_FERIA
+  WEB
+  OTRO
+}
+
+// -----------------------------------------------------------------------------
+// CLIENTES
+// -----------------------------------------------------------------------------
+
+model Client {
+  id                 String         @id @default(cuid())
+  razonSocial        String
+  cuitCuil           String?
+  contactoNombre     String
+  contactoCargo      String?
+  telefono           String
+  email              String?
+  comportamientoNotas String?       @db.Text
+  internalRating     Int            @default(3) // 1 a 5 estrellas
+  origenCliente      OrigenCliente  @default(OTRO)
+  proximaExpo        String?
+  fechaProximaExpo   DateTime?
+
+  orders             Order[]
+
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([razonSocial])
+}
+
+// -----------------------------------------------------------------------------
+// EQUIPOS / INVENTARIO
+// -----------------------------------------------------------------------------
+
+model Equipment {
+  id                       String          @id @default(cuid())
+  codigoInterno            String          @unique
+  modelo                   EquipmentModel
+  descripcion              String?
+  estado                   EquipmentStatus @default(DISPONIBLE)
+  especificacionesTecnicas String?         @db.Text
+
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+
+  @@index([modelo])
+  @@index([estado])
+}
+
+// -----------------------------------------------------------------------------
+// ALQUILERES / EVENTOS (ORDERS)
+// -----------------------------------------------------------------------------
+
+model Order {
+  id                    String       @id @default(cuid())
+  clienteId             String
+  cliente               Client       @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  nombreEvento          String
+  ubicacionDireccion    String
+  ubicacionMapaUrl      String?
+
+  fechaHoraEntrega      DateTime
+  fechaHoraRetiro       DateTime
+  cantidadDias          Int
+
+  estadoEvento          OrderStatus  @default(PRESUPUESTADO)
+
+  // Integración Google Calendar
+  gcalEventIdEntrega    String?
+  gcalEventIdRetiro     String?
+  gcalLastSyncAt        DateTime?
+
+  items                 OrderItem[]
+  digitalServices       DigitalService[]
+  insurance             Insurance?
+  payment               Payment?
+  postEvent             PostEvent?
+
+  createdAt             DateTime     @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@index([clienteId])
+  @@index([estadoEvento])
+  @@index([fechaHoraEntrega])
+  @@index([fechaHoraRetiro])
+}
+
+// -----------------------------------------------------------------------------
+// DETALLE DE EQUIPOS ALQUILADOS
+// -----------------------------------------------------------------------------
+
+model OrderItem {
+  id             String         @id @default(cuid())
+  orderId        String
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  equipmentModel EquipmentModel
+  cantidad       Int
+
+  @@index([orderId])
+  @@index([equipmentModel])
+}
+
+// -----------------------------------------------------------------------------
+// SERVICIOS DIGITALES CONTRATADOS
+// -----------------------------------------------------------------------------
+
+model DigitalService {
+  id                       String             @id @default(cuid())
+  orderId                  String
+  order                    Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  tipoServicio             DigitalServiceType
+  descripcionRequerimientos String?           @db.Text
+
+  estadoMaterial           MaterialStatus     @default(NO_NECESARIO)
+  notasMaterialFaltante    String?            @db.Text
+  urlArchivosAdjuntos      String?
+
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@index([orderId])
+}
+
+// -----------------------------------------------------------------------------
+// SEGUROS
+// -----------------------------------------------------------------------------
+
+model Insurance {
+  id                    String           @id @default(cuid())
+  orderId               String           @unique
+  order                 Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  requiereSeguro        Boolean          @default(false)
+  estado                InsuranceStatus  @default(PENDIENTE)
+  urlComprobanteSeguro  String?
+  notas                 String?          @db.Text
+
+  createdAt             DateTime         @default(now())
+  updatedAt              DateTime        @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// FINANZAS Y FACTURACIÓN
+// -----------------------------------------------------------------------------
+
+model Payment {
+  id                  String        @id @default(cuid())
+  orderId             String        @unique
+  order               Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  precioTotal         Float         @default(0)
+  tipoFactura         InvoiceType   @default(SIN_FACTURA)
+  condicionPago       PaymentMethod @default(TRANSFERENCIA)
+
+  montoSena           Float         @default(0)
+  fechaSena           DateTime?
+  cuentaPagoSena      String?
+  urlComprobanteSena  String?
+  senaPagada          Boolean       @default(false)
+
+  pagadoTotal         Boolean       @default(false)
+
+  createdAt           DateTime      @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// POST-EVENTO
+// -----------------------------------------------------------------------------
+
+model PostEvent {
+  id                       String   @id @default(cuid())
+  orderId                  String   @unique
+  order                    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  linkResenaEnviado        Boolean  @default(false)
+  encuestado                Boolean @default(false)
+  calificacionSatisfaccion Int?
+  comentariosCliente       String?  @db.Text
+
+  createdAt                DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}

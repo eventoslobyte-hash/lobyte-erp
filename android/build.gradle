@@ -1,0 +1,25 @@
+// LOBYTE ERP — proyecto Android (Trusted Web Activity)
+// Envuelve la PWA ya desplegada en una app nativa instalable (.apk).
+// No requiere Android Studio para compilarla: ver .github/workflows/build-apk.yml,
+// que la compila sola en GitHub Actions cada vez que se hace push.
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

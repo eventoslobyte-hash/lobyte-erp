@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.lobyte.erp",
+      "sha256_cert_fingerprints": [
+        "07:7C:BE:2A:33:4D:FD:BA:AC:69:CD:FD:51:ED:F3:39:F6:94:DD:BA:12:A5:0F:4D:96:BD:42:86:8F:F0:46:C1"
+      ]
+    }
+  }
+]

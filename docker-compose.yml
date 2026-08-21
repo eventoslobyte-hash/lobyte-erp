@@ -1,0 +1,21 @@
+version: "3.9"
+
+# Postgres local para desarrollo, alternativa a usar un proyecto de Supabase.
+# Uso: docker compose up -d
+# Luego en .env: DATABASE_URL="postgresql://lobyte:lobyte@localhost:5432/lobyte_erp?schema=public"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lobyte
+      POSTGRES_PASSWORD: lobyte
+      POSTGRES_DB: lobyte_erp
+    ports:
+      - "5432:5432"
+    volumes:
+      - lobyte_db_data:/var/lib/postgresql/data
+
+volumes:
+  lobyte_db_data:
