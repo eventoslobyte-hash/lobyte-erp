@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { CalendarSync, Loader2 } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -29,7 +29,7 @@ export function CalendarSyncButton({ action }: { action: () => Promise<{ skipped
         })
       }
     >
-      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarSync className="h-4 w-4" />}
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
       Sincronizar Calendar
     </Button>
   );
